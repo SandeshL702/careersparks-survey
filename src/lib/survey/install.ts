@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { getDbSource, getSql, resetSqlCache } from "@/lib/db";
+import { allowEmbeddedDb, getDbSource, getSql, resetSqlCache } from "@/lib/db";
 import { prepareWorkspace } from "./api";
 
 export type InstallState =
@@ -15,10 +15,19 @@ export type InstallState =
     };
 
 async function readInstallState(): Promise<InstallState> {
-  const env = await import("@/lib/runtime-env");
-  await env.loadRuntimeEnv();
-  if (getDbSource() === "pglite") return { status: "ready" };
   try {
+    const env = await import("@/lib/runtime-env");
+    await env.loadRuntimeEnv();
+    if (getDbSource() === "pglite") {
+      if (allowEmbeddedDb()) return { status: "ready" };
+      return {
+        status: "needs_install",
+        dbHost: process.env.DB_HOST || "localhost",
+        dbPort: process.env.DB_PORT || "3306",
+        dbUser: process.env.DB_USER || process.env.DB_USERNAME || "",
+        dbName: process.env.DB_NAME || process.env.DB_DATABASE || "",
+      };
+    }
     const sql = await getSql();
     const members = await sql<{ n: number }>`select count(*)::int as n from workspace_members`;
     if ((members[0]?.n ?? 0) > 0) return { status: "ready" };

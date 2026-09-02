@@ -34,6 +34,8 @@ import { bearer, genericOAuth } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { getCookie } from "@tanstack/react-start/server";
 import { randomBytes } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Pool } from "pg";
 import { createPool as createMysqlPool } from "mysql2/promise";
 import { ensureDbReady, getPglite } from "../db";
@@ -49,7 +51,18 @@ import {
   PREVIEW_CLIENT_SECRET,
 } from "./preview";
 
-// Kick (and share) PGLite bootstrap as soon as the auth server module loads.
+try {
+  const installFile = join(process.cwd(), "data", "install.json");
+  if (existsSync(installFile)) {
+    const saved = JSON.parse(readFileSync(installFile, "utf8")) as Record<string, unknown>;
+    for (const [key, value] of Object.entries(saved)) {
+      if (typeof value === "string" && value && !process.env[key]) process.env[key] = value;
+    }
+  }
+} catch {
+  /* first boot */
+}
+
 void ensureDbReady();
 
 /**

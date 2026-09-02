@@ -10,8 +10,13 @@ import type { FormCategory } from "@/lib/survey/types";
 
 export const Route = createFileRoute("/")({
   loader: async () => {
-    const state = await getInstallState();
-    if (state.status !== "ready") throw redirect({ to: "/install" });
+    try {
+      const state = await getInstallState();
+      if (state.status !== "ready") throw redirect({ to: "/install" });
+    } catch (err) {
+      if (err && typeof err === "object" && "to" in err) throw err;
+      throw redirect({ to: "/install" });
+    }
     return null;
   },
   component: Home,

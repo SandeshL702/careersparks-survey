@@ -2,20 +2,23 @@ function installPath() {
   return `${process.cwd()}/data/install.json`;
 }
 
+function applyEnv(data: Record<string, unknown>) {
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === "string" && value && !process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+
 export async function loadRuntimeEnv() {
   if (typeof window !== "undefined") return;
-  const fs = await import("node:fs");
-  const file = installPath();
-  if (!fs.existsSync(file)) return;
   try {
-    const data = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
-    for (const [key, value] of Object.entries(data)) {
-      if (typeof value === "string" && value && !process.env[key]) {
-        process.env[key] = value;
-      }
-    }
+    const fs = await import("node:fs");
+    const file = installPath();
+    if (!fs.existsSync(file)) return;
+    applyEnv(JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>);
   } catch {
-    /* ignore corrupt install file */
+    /* ignore */
   }
 }
 

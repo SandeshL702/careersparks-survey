@@ -9,7 +9,19 @@ import { authClient } from "@/lib/auth/client";
 import { prepareWorkspace } from "@/lib/survey/api";
 
 export const Route = createFileRoute("/install")({
-  loader: async () => getInstallState(),
+  loader: async () => {
+    try {
+      return await getInstallState();
+    } catch {
+      return {
+        status: "needs_install" as const,
+        dbHost: "localhost",
+        dbPort: "3306",
+        dbUser: "",
+        dbName: "",
+      };
+    }
+  },
   component: InstallPage,
 });
 

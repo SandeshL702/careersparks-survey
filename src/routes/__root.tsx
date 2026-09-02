@@ -7,6 +7,40 @@ import appCss from "../styles.css?url";
 const APP_NAME = "CareerSparks Survey";
 
 export const Route = createRootRoute({
+  errorComponent: function RootError({ error }) {
+    const message = error instanceof Error ? error.message : "Server error";
+    return (
+      <html lang="en">
+        <head>
+          <meta charSet="utf-8" />
+          <title>CareerSparks</title>
+        </head>
+        <body
+          style={{
+            margin: 0,
+            minHeight: "100vh",
+            background: "#0C0B09",
+            color: "#F6F1E4",
+            fontFamily: "Figtree, system-ui, sans-serif",
+            display: "grid",
+            placeItems: "center",
+            padding: 24,
+          }}
+        >
+          <div style={{ maxWidth: 420, textAlign: "center" }}>
+            <p style={{ fontSize: 13, letterSpacing: "0.2em", color: "#F5C518" }}>CAREERSPARKS</p>
+            <h1 style={{ fontSize: 28, margin: "8px 0 12px" }}>Site starting…</h1>
+            <p style={{ color: "#A39B8A", fontSize: 14 }}>{message}</p>
+            <p style={{ marginTop: 24 }}>
+              <a href="/install" style={{ color: "#0C0B09", background: "#F5C518", padding: "10px 18px", borderRadius: 999, textDecoration: "none", fontWeight: 600 }}>
+                Open installer
+              </a>
+            </p>
+          </div>
+        </body>
+      </html>
+    );
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
