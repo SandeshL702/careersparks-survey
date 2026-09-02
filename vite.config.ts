@@ -171,6 +171,10 @@ export default defineConfig(({ command, isPreview }) => ({
       ? [
           nitro({
             preset: process.env.NITRO_PRESET || "vercel",
+            // Rolldown/Vite 8 bug: SSR chunk re-exports undeclared `ssr_exports`
+            // which 500s every Hostinger/node-server request. Inline until fixed:
+            // https://github.com/TanStack/router/issues/8031
+            inlineDynamicImports: true,
             // Auto-registers server/middleware/* (the PWA install page +
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
             // false, so removing this silently unwires /?install=1 on deploys.
