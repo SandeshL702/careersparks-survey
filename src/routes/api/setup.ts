@@ -1,16 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { describeDatabaseUrl, resolveDatabaseUrl } from "@/lib/pg-url";
 import { bootstrapCareerSparks } from "@/lib/survey/bootstrap";
 
 export const Route = createFileRoute("/api/setup")({
   server: {
     handlers: {
       GET: async () => {
-        const url = resolveDatabaseUrl();
-        return Response.json({
-          ready: Boolean(url),
-          ...describeDatabaseUrl(url),
-        });
+        try {
+          const { getSql } = await import("@/lib/db");
+          const sql = await getSql();
+          const owners = await sql<{ n: number }>`select count(*)::int as n from workspace_members where role = ${"owner"}`;
+          return Response.json({ installed: (owners[0]?.n ?? 0) > 0 });
+        } catch {
+          return Response.json({ installed: false });
+        }
       },
       POST: async ({ request }) => {
         try {
@@ -27,10 +29,7 @@ export const Route = createFileRoute("/api/setup")({
           return Response.json(result);
         } catch (err) {
           const message = err instanceof Error ? err.message : "Install failed.";
-          const url = resolveDatabaseUrl();
-          const info = describeDatabaseUrl(url);
-          console.error("[setup]", err, info);
-          return Response.json({ error: true, message, ...info }, { status: 400 });
+          return Response.json({ error: true, message }, { status: 400 });
         }
       },
     },

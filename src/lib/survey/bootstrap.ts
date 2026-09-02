@@ -17,6 +17,10 @@ export async function bootstrapCareerSparks(input: {
   if (password.length < 8) throw new Error("Password must be at least 8 characters.");
 
   const sql = await getSql();
+  const owners = await sql<{ n: number }>`select count(*)::int as n from workspace_members where role = ${"owner"}`;
+  if ((owners[0]?.n ?? 0) > 0) {
+    throw new Error("Already installed. Open /login.");
+  }
 
   let user = (await sql<{ id: string }>`select id from "user" where email = ${email} limit 1`)[0];
   if (!user) {
