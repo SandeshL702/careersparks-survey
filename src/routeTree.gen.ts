@@ -19,6 +19,7 @@ import { Route as AdminInboxRouteImport } from './routes/admin.inbox'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminTeamRouteImport } from './routes/admin.team'
 import { Route as AdminTemplatesRouteImport } from './routes/admin.templates'
+import { Route as ApiSetupRouteImport } from './routes/api/setup'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as AdminFormsIndexRouteImport } from './routes/admin.forms.index'
 import { Route as AdminFormsFormIdRouteImport } from './routes/admin.forms.$formId'
@@ -78,6 +79,11 @@ const AdminTemplatesRoute = AdminTemplatesRouteImport.update({
   path: '/templates',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiSetupRoute = ApiSetupRouteImport.update({
+  id: '/api/setup',
+  path: '/api/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FSlugRoute = FSlugRouteImport.update({
   id: '/f/$slug',
   path: '/f/$slug',
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/team': typeof AdminTeamRoute
   '/admin/templates': typeof AdminTemplatesRoute
+  '/api/setup': typeof ApiSetupRoute
   '/f/$slug': typeof FSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/forms/$formId': typeof AdminFormsFormIdRouteWithChildren
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/team': typeof AdminTeamRoute
   '/admin/templates': typeof AdminTemplatesRoute
+  '/api/setup': typeof ApiSetupRoute
   '/f/$slug': typeof FSlugRoute
   '/admin': typeof AdminIndexRoute
   '/admin/forms/new': typeof AdminFormsNewRoute
@@ -169,6 +177,7 @@ export interface FileRoutesById {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/team': typeof AdminTeamRoute
   '/admin/templates': typeof AdminTemplatesRoute
+  '/api/setup': typeof ApiSetupRoute
   '/f/$slug': typeof FSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/forms/$formId': typeof AdminFormsFormIdRouteWithChildren
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/team'
     | '/admin/templates'
+    | '/api/setup'
     | '/f/$slug'
     | '/admin/'
     | '/admin/forms/$formId'
@@ -209,6 +219,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/team'
     | '/admin/templates'
+    | '/api/setup'
     | '/f/$slug'
     | '/admin'
     | '/admin/forms/new'
@@ -228,6 +239,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/team'
     | '/admin/templates'
+    | '/api/setup'
     | '/f/$slug'
     | '/admin/'
     | '/admin/forms/$formId'
@@ -244,6 +256,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   InstallRoute: typeof InstallRoute
   LoginRoute: typeof LoginRoute
+  ApiSetupRoute: typeof ApiSetupRoute
   FSlugRoute: typeof FSlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -319,6 +332,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/templates'
       preLoaderRoute: typeof AdminTemplatesRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/api/setup': {
+      id: '/api/setup'
+      path: '/api/setup'
+      fullPath: '/api/setup'
+      preLoaderRoute: typeof ApiSetupRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/f/$slug': {
       id: '/f/$slug'
@@ -435,6 +455,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   InstallRoute: InstallRoute,
   LoginRoute: LoginRoute,
+  ApiSetupRoute: ApiSetupRoute,
   FSlugRoute: FSlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
