@@ -145,7 +145,13 @@ const mysqlCfg = mysqlConfigFromEnv();
 const database = mysqlCfg
   ? createMysqlPool("uri" in mysqlCfg ? { uri: mysqlCfg.uri } : mysqlCfg)
   : databaseUrl
-    ? new Pool({ connectionString: databaseUrl })
+    ? new Pool({
+        connectionString: databaseUrl,
+        max: 5,
+        ssl: /supabase\.co|neon\.tech|sslmode=require/i.test(databaseUrl)
+          ? { rejectUnauthorized: false }
+          : undefined,
+      })
     : { dialect: pgliteDialect(() => getPglite()), type: "postgres" as const };
 
 const issuerBase = grokIssuer.replace(/\/+$/, "");

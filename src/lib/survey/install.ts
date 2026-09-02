@@ -53,45 +53,76 @@ export const getInstallState = createServerFn({ method: "GET" }).handler(async (
 
 export const runInstall = createServerFn({ method: "POST" })
   .validator(
-    z.object({
-      dbHost: z.string().min(1),
-      dbPort: z.string().optional(),
-      dbUser: z.string().min(1),
-      dbPassword: z.string().min(1),
-      dbName: z.string().min(1),
-      adminEmail: z.string().email(),
-      adminPassword: z.string().min(8),
-      adminName: z.string().optional(),
-      siteUrl: z.string().optional(),
-    }),
+    z
+      .object({
+        databaseUrl: z.string().optional(),
+        dbHost: z.string().optional(),
+        dbPort: z.string().optional(),
+        dbUser: z.string().optional(),
+        dbPassword: z.string().optional(),
+        dbName: z.string().optional(),
+        adminEmail: z.string().email(),
+        adminPassword: z.string().min(8),
+        adminName: z.string().optional(),
+        siteUrl: z.string().optional(),
+      }),
   )
   .handler(async ({ data }) => {
     const current = await readInstallState();
     if (current.status === "ready") throw new Error("Already installed.");
 
-    const mysql = await import("mysql2/promise");
-    const conn = await mysql.createConnection({
-      host: data.dbHost,
-      port: Number(data.dbPort || 3306),
-      user: data.dbUser,
-      password: data.dbPassword,
-      database: data.dbName,
-    });
-    try {
-      await conn.query("select 1");
-    } finally {
-      await conn.end();
+    const databaseUrl = data.databaseUrl?.trim();
+    if (!databaseUrl && !(data.dbHost && data.dbUser && data.dbPassword && data.dbName)) {
+      const existing = getDbSource();
+      if (existing !== "mysql" && existing !== "neon") {
+        throw new Error("Paste the Supabase connection URI, or fill MySQL fields.");
+      }
+    } else if (databaseUrl) {
+      if (!/^postgres(ql)?:\/\//i.test(databaseUrl)) {
+        throw new Error("Use a postgres:// or postgresql:// URL from Supabase.");
+      }
+      const pgMod = await import("pg");
+      const Client = pgMod.Client || (pgMod as { default?: { Client: typeof pgMod.Client } }).default?.Client;
+      if (!Client) throw new Error("Postgres driver missing.");
+      const client = new Client({
+        connectionString: databaseUrl,
+        ssl: /supabase\.co|sslmode=require/i.test(databaseUrl) ? { rejectUnauthorized: false } : undefined,
+      });
+      await client.connect();
+      try {
+        await client.query("select 1");
+      } finally {
+        await client.end();
+      }
+    } else {
+      const mysql = await import("mysql2/promise");
+      const conn = await mysql.createConnection({
+        host: data.dbHost,
+        port: Number(data.dbPort || 3306),
+        user: data.dbUser,
+        password: data.dbPassword,
+        database: data.dbName,
+      });
+      try {
+        await conn.query("select 1");
+      } finally {
+        await conn.end();
+      }
     }
 
     const { randomBytes } = await import("node:crypto");
     const secret = process.env.BETTER_AUTH_SECRET || randomBytes(32).toString("hex");
     const env = await import("@/lib/runtime-env");
     await env.saveInstallEnv({
-      DB_HOST: data.dbHost,
-      DB_PORT: data.dbPort || "3306",
-      DB_USER: data.dbUser,
-      DB_PASSWORD: data.dbPassword,
-      DB_NAME: data.dbName,
+      ...(databaseUrl
+        ? { DATABASE_URL: databaseUrl }
+        : {
+            DB_HOST: data.dbHost || "",
+            DB_PORT: data.dbPort || "3306",
+            DB_USER: data.dbUser || "",
+            DB_PASSWORD: data.dbPassword || "",
+            DB_NAME: data.dbName || "",
+          }),
       ADMIN_EMAIL: data.adminEmail.trim().toLowerCase(),
       ADMIN_PASSWORD: data.adminPassword,
       ADMIN_NAME: data.adminName?.trim() || "CareerSparks Admin",
@@ -100,8 +131,9 @@ export const runInstall = createServerFn({ method: "POST" })
       VITE_AUTH_ENABLED: "true",
     });
     resetSqlCache();
-    if (getDbSource() !== "mysql") {
-      throw new Error("Database saved, but MySQL is still not active. Restart the Node.js app in hPanel once.");
+    const source = getDbSource();
+    if (source !== "mysql" && source !== "neon") {
+      throw new Error("Database saved. Restart the Node.js app in hPanel once, then open /install again.");
     }
     await getSql();
     await prepareWorkspace();

@@ -28,7 +28,7 @@ export const Route = createFileRoute("/install")({
 function InstallPage() {
   const initial = Route.useLoaderData();
   const navigate = useNavigate();
-  const needsDb = initial.status === "needs_install";
+  const [databaseUrl, setDatabaseUrl] = useState("");
   const [dbHost, setDbHost] = useState(initial.status === "ready" ? "localhost" : initial.dbHost);
   const [dbPort, setDbPort] = useState(initial.status === "needs_install" ? initial.dbPort : "3306");
   const [dbUser, setDbUser] = useState(initial.status === "needs_install" ? initial.dbUser : "");
@@ -50,6 +50,7 @@ function InstallPage() {
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       await runInstall({
         data: {
+          databaseUrl,
           dbHost,
           dbPort,
           dbUser,
@@ -98,12 +99,24 @@ function InstallPage() {
         </p>
         <form onSubmit={(e) => void onInstall(e)} className="mt-8 space-y-5">
           <section className="rounded-2xl border border-border bg-surface p-5">
-            <h2 className="text-sm font-semibold">1. Hostinger MySQL</h2>
-            <p className="mt-1 text-xs text-muted">hPanel → Databases → MySQL se copy karo.</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <h2 className="text-sm font-semibold">1. Database</h2>
+            <p className="mt-1 text-xs text-muted">
+              Supabase → Project Settings → Database → Connection string (URI). Password wala URI paste karo.
+            </p>
+            <div className="mt-4">
+              <Label>Supabase / Postgres URL</Label>
+              <Input
+                className="mt-1 font-mono text-xs"
+                placeholder="postgresql://postgres:...@db.xxxx.supabase.co:5432/postgres"
+                value={databaseUrl}
+                onChange={(e) => setDatabaseUrl(e.target.value)}
+              />
+            </div>
+            <p className="mt-4 text-xs text-muted">Ya Hostinger MySQL (optional):</p>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <Label>Database host</Label>
-                <Input className="mt-1" value={dbHost} onChange={(e) => setDbHost(e.target.value)} required />
+                <Input className="mt-1" value={dbHost} onChange={(e) => setDbHost(e.target.value)} />
               </div>
               <div>
                 <Label>Port</Label>
@@ -111,11 +124,11 @@ function InstallPage() {
               </div>
               <div>
                 <Label>Database name</Label>
-                <Input className="mt-1" value={dbName} onChange={(e) => setDbName(e.target.value)} required />
+                <Input className="mt-1" value={dbName} onChange={(e) => setDbName(e.target.value)} />
               </div>
               <div>
                 <Label>Username</Label>
-                <Input className="mt-1" value={dbUser} onChange={(e) => setDbUser(e.target.value)} required />
+                <Input className="mt-1" value={dbUser} onChange={(e) => setDbUser(e.target.value)} />
               </div>
               <div>
                 <Label>Password</Label>
@@ -124,7 +137,6 @@ function InstallPage() {
                   type="password"
                   value={dbPassword}
                   onChange={(e) => setDbPassword(e.target.value)}
-                  required={needsDb}
                 />
               </div>
             </div>

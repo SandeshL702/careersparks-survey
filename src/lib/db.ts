@@ -112,15 +112,52 @@ function toSql(run: Run): Sql {
   return sql;
 }
 
+function pgPoolOptions(url: string) {
+  const needsSsl = /supabase\.co|neon\.tech|sslmode=require/i.test(url);
+  return {
+    connectionString: url,
+    max: 5,
+    ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
+  };
+}
+
 function createNeonSql(): Promise<Sql> {
   globalRef.__pgSqlPromise__ ??= (async () => {
-    // Regular Postgres driver: node-postgres (`pg`) — works directly with Neon's
-    // pooled endpoint. One pool per process; warm serverless instances reuse it.
+    const url = process.env.DATABASE_URL?.trim();
+    if (!url) throw new Error("DATABASE_URL is not set.");
     const { Pool, types } = await import("pg");
     types.setTypeParser(OID_INT8, Number);
     types.setTypeParser(OID_DATE, identity);
     types.setTypeParser(OID_INTERVAL, identity);
-    const pool = new Pool({ connectionString: databaseUrl });
+    const pool = new Pool(pgPoolOptions(url));
+    await pool.query(
+      "create table if not exists _migrations (name text primary key, applied_at timestamptz not null default now())",
+    );
+    const migrations = import.meta.glob("/migrations/*.sql", {
+      query: "?raw",
+      import: "default",
+      eager: true,
+    }) as Record<string, string>;
+    const doneRows = await pool.query<{ name: string }>("select name from _migrations");
+    const done = doneRows.rows.map((r) => r.name);
+    for (const { name, path } of pendingMigrations(Object.keys(migrations), done)) {
+      const client = await pool.connect();
+      try {
+        await client.query("begin");
+        await client.query(migrations[path] ?? "");
+        await client.query("insert into _migrations (name) values ($1)", [name]);
+        await client.query("commit");
+      } catch (err) {
+        try {
+          await client.query("rollback");
+        } catch {
+          /* ignore */
+        }
+        throw err;
+      } finally {
+        client.release();
+      }
+    }
     return toSql(async <T>(text: string, params: unknown[]) => {
       const res = await pool.query(text, params);
       return res.rows as T[];
