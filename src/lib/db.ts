@@ -5,13 +5,14 @@ import {
   pgToMysql,
   splitSqlStatements,
 } from "./sql-mysql";
+import { pgPoolOptions, resolveDatabaseUrl } from "./pg-url";
 
 export type DbSource = "neon" | "pglite" | "mysql";
 
 /** PGLite only for Grok preview / local `npm run dev`. Never on Hostinger. */
 export function allowEmbeddedDb(): boolean {
   if (typeof window !== "undefined") return false;
-  if (mysqlConfigFromEnv() || process.env.DATABASE_URL?.trim()) return false;
+  if (mysqlConfigFromEnv() || resolveDatabaseUrl()) return false;
   if (process.env.GROK_AUTH_ISSUER) return true;
   return process.env.NODE_ENV === "development";
 }
@@ -19,7 +20,7 @@ export function allowEmbeddedDb(): boolean {
 function detectDbSource(): DbSource {
   const mysql = mysqlConfigFromEnv();
   if (mysql) return "mysql";
-  const url = typeof process !== "undefined" ? process.env.DATABASE_URL?.trim() : "";
+  const url = resolveDatabaseUrl();
   if (url) return /^mysql(?:s)?:\/\//i.test(url) ? "mysql" : "neon";
   return "pglite";
 }
@@ -104,24 +105,26 @@ function toSql(run: Run): Sql {
   return sql;
 }
 
-function pgPoolOptions(url: string) {
-  const needsSsl = /supabase\.co|neon\.tech|sslmode=require/i.test(url);
-  return {
-    connectionString: url,
-    max: 5,
-    ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
-  };
+function pgPoolOptionsLocal(url: string) {
+  return pgPoolOptions(url);
 }
 
 function createNeonSql(): Promise<Sql> {
   globalRef.__pgSqlPromise__ ??= (async () => {
-    const url = process.env.DATABASE_URL?.trim();
+    try {
+      const dns = await import("node:dns");
+      dns.setDefaultResultOrder("ipv4first");
+    } catch {
+      /* ignore */
+    }
+    const url = resolveDatabaseUrl();
     if (!url) throw new Error("DATABASE_URL is not set.");
+    if (!process.env.DATABASE_URL) process.env.DATABASE_URL = url;
     const { Pool, types } = await import("pg");
     types.setTypeParser(OID_INT8, Number);
     types.setTypeParser(OID_DATE, identity);
     types.setTypeParser(OID_INTERVAL, identity);
-    const pool = new Pool(pgPoolOptions(url));
+    const pool = new Pool(pgPoolOptionsLocal(url));
     await pool.query(
       "create table if not exists _migrations (name text primary key, applied_at timestamptz not null default now())",
     );
@@ -316,6 +319,8 @@ export function getSql(): Promise<Sql> {
       try {
         const env = await import("./runtime-env");
         await env.loadRuntimeEnv();
+        const resolved = resolveDatabaseUrl();
+        if (resolved && !process.env.DATABASE_URL) process.env.DATABASE_URL = resolved;
       } catch {
         /* no install file */
       }

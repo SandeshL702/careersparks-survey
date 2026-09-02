@@ -36,10 +36,12 @@ import { getCookie } from "@tanstack/react-start/server";
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import dns from "node:dns";
 import { Pool } from "pg";
 import { createPool as createMysqlPool } from "mysql2/promise";
 import { allowEmbeddedDb, ensureDbReady, getPglite } from "../db";
 import { mysqlConfigFromEnv } from "../sql-mysql";
+import { pgPoolOptions, resolveDatabaseUrl } from "../pg-url";
 import { emailAndPasswordEnabled } from "./email-password";
 import { GATE_PROVIDER_ID, gateIdentitySessions } from "./gate-session.server";
 import { GROK_PROVIDERS } from "./providers";
@@ -52,6 +54,11 @@ import {
 } from "./preview";
 
 try {
+  dns.setDefaultResultOrder("ipv4first");
+} catch {
+  /* ignore */
+}
+try {
   const installFile = join(process.cwd(), "data", "install.json");
   if (existsSync(installFile)) {
     const saved = JSON.parse(readFileSync(installFile, "utf8")) as Record<string, unknown>;
@@ -62,6 +69,9 @@ try {
 } catch {
   /* first boot */
 }
+
+const resolvedUrl = resolveDatabaseUrl();
+if (resolvedUrl && !process.env.DATABASE_URL) process.env.DATABASE_URL = resolvedUrl;
 
 void ensureDbReady().catch(() => undefined);
 
@@ -140,18 +150,12 @@ const trustedOrigins: string[] = explicitBaseURL
       ...LOCAL_DEV_ORIGINS,
     ];
 
-const databaseUrl = env("DATABASE_URL");
+const databaseUrl = env("DATABASE_URL") || resolveDatabaseUrl();
 const mysqlCfg = mysqlConfigFromEnv();
 const database = mysqlCfg
   ? createMysqlPool("uri" in mysqlCfg ? { uri: mysqlCfg.uri } : mysqlCfg)
   : databaseUrl
-    ? new Pool({
-        connectionString: databaseUrl,
-        max: 5,
-        ssl: /supabase\.co|neon\.tech|sslmode=require/i.test(databaseUrl)
-          ? { rejectUnauthorized: false }
-          : undefined,
-      })
+    ? new Pool(pgPoolOptions(databaseUrl))
     : allowEmbeddedDb()
       ? { dialect: pgliteDialect(() => getPglite()), type: "postgres" as const }
       : new Pool({
