@@ -1,3 +1,25 @@
+/** Encode `@ # / %` inside the password so URL parsers don't split the host. */
+export function encodeDatabaseUrl(raw: string): string {
+  const url = raw.trim().replace(/^["']|["']$/g, "");
+  const match = url.match(/^(postgres(?:ql)?:\/\/)(.+)$/i);
+  if (!match) return url;
+  const rest = match[2];
+  const at = rest.lastIndexOf("@");
+  if (at < 0) return url;
+  const userinfo = rest.slice(0, at);
+  const hostAndPath = rest.slice(at + 1);
+  const colon = userinfo.indexOf(":");
+  if (colon < 0) return `${match[1]}${userinfo}@${hostAndPath}`;
+  const user = userinfo.slice(0, colon);
+  let password = userinfo.slice(colon + 1);
+  try {
+    password = decodeURIComponent(password);
+  } catch {
+    /* already raw */
+  }
+  return `${match[1]}${encodeURIComponent(user)}:${encodeURIComponent(password)}@${hostAndPath}`;
+}
+
 /** Hostinger + Supabase inject different env names. Normalize to one URL. */
 export function resolveDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string | undefined {
   const keys = [
@@ -12,7 +34,9 @@ export function resolveDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string
   for (const key of keys) {
     const value = env[key]?.trim();
     if (!value) continue;
-    if (/^(postgres(ql)?|mysql):\/\//i.test(value)) return value;
+    if (/^(postgres(ql)?|mysql):\/\//i.test(value)) {
+      return /^mysql/i.test(value) ? value : encodeDatabaseUrl(value);
+    }
   }
 
   const host = env.POSTGRES_HOST?.trim() || env.SUPABASE_DB_HOST?.trim();
@@ -25,9 +49,10 @@ export function resolveDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string
 }
 
 export function pgPoolOptions(url: string) {
-  const needsSsl = /supabase\.co|neon\.tech|pooler\.supabase|sslmode=require/i.test(url);
+  const encoded = encodeDatabaseUrl(url);
+  const needsSsl = /supabase\.co|neon\.tech|pooler\.supabase|sslmode=require/i.test(encoded);
   return {
-    connectionString: url,
+    connectionString: encoded,
     max: 5,
     connectionTimeoutMillis: 8000,
     ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
