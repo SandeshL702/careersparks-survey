@@ -1,19 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { authClient, authEnabled } from "@/lib/auth/client";
 import { SparkMark } from "@/components/brand/spark-mark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { prepareWorkspace, getDashboardStats } from "@/lib/survey/api";
-import { getInstallState } from "@/lib/survey/install";
 
 export const Route = createFileRoute("/login")({
-  loader: async () => {
-    const state = await getInstallState();
-    if (state.status !== "ready") throw redirect({ to: "/install" });
-    return null;
-  },
   component: Login,
 });
 

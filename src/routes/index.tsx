@@ -1,24 +1,13 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { Logo } from "@/components/brand/spark-mark";
 import { Button } from "@/components/ui/button";
 import { FormShare } from "@/components/survey/form-share";
 import { listPublishedForms } from "@/lib/survey/api";
-import { getInstallState } from "@/lib/survey/install";
 import type { FormCategory } from "@/lib/survey/types";
 
 export const Route = createFileRoute("/")({
-  loader: async () => {
-    try {
-      const state = await getInstallState();
-      if (state.status !== "ready") throw redirect({ to: "/install" });
-    } catch (err) {
-      if (err && typeof err === "object" && "to" in err) throw err;
-      throw redirect({ to: "/install" });
-    }
-    return null;
-  },
   component: Home,
 });
 

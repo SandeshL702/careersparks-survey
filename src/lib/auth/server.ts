@@ -38,7 +38,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Pool } from "pg";
 import { createPool as createMysqlPool } from "mysql2/promise";
-import { ensureDbReady, getPglite } from "../db";
+import { allowEmbeddedDb, ensureDbReady, getPglite } from "../db";
 import { mysqlConfigFromEnv } from "../sql-mysql";
 import { emailAndPasswordEnabled } from "./email-password";
 import { GATE_PROVIDER_ID, gateIdentitySessions } from "./gate-session.server";
@@ -63,7 +63,7 @@ try {
   /* first boot */
 }
 
-void ensureDbReady();
+void ensureDbReady().catch(() => undefined);
 
 /**
  * Preview secret must outlive module reloads: PGLite (and its session rows) is
@@ -152,7 +152,13 @@ const database = mysqlCfg
           ? { rejectUnauthorized: false }
           : undefined,
       })
-    : { dialect: pgliteDialect(() => getPglite()), type: "postgres" as const };
+    : allowEmbeddedDb()
+      ? { dialect: pgliteDialect(() => getPglite()), type: "postgres" as const }
+      : new Pool({
+          connectionString: "postgresql://127.0.0.1:9/unconfigured",
+          connectionTimeoutMillis: 200,
+          max: 1,
+        });
 
 const issuerBase = grokIssuer.replace(/\/+$/, "");
 const grokAuthorizationUrl = `${issuerBase}/api/auth/oauth2/authorize`;

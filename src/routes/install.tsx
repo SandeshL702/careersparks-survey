@@ -9,33 +9,17 @@ import { authClient } from "@/lib/auth/client";
 import { prepareWorkspace } from "@/lib/survey/api";
 
 export const Route = createFileRoute("/install")({
-  loader: async () => {
-    try {
-      return await getInstallState();
-    } catch {
-      return {
-        status: "needs_install" as const,
-        dbHost: "localhost",
-        dbPort: "3306",
-        dbUser: "",
-        dbName: "",
-      };
-    }
-  },
   component: InstallPage,
 });
 
 function InstallPage() {
-  const initial = Route.useLoaderData();
   const navigate = useNavigate();
   const [databaseUrl, setDatabaseUrl] = useState("");
-  const [dbHost, setDbHost] = useState(initial.status === "ready" ? "localhost" : initial.dbHost);
-  const [dbPort, setDbPort] = useState(initial.status === "needs_install" ? initial.dbPort : "3306");
-  const [dbUser, setDbUser] = useState(initial.status === "needs_install" ? initial.dbUser : "");
+  const [dbHost, setDbHost] = useState("localhost");
+  const [dbPort, setDbPort] = useState("3306");
+  const [dbUser, setDbUser] = useState("");
   const [dbPassword, setDbPassword] = useState("");
-  const [dbName, setDbName] = useState(
-    initial.status === "needs_install" ? initial.dbName : initial.status === "needs_admin" ? initial.dbName : "",
-  );
+  const [dbName, setDbName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminName, setAdminName] = useState("CareerSparks Admin");
@@ -77,15 +61,6 @@ function InstallPage() {
     } finally {
       setBusy(false);
     }
-  }
-
-  if (initial.status === "ready") {
-    return (
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4">
-        <Logo />
-        <p className="mt-6 text-sm text-muted">Already installed.</p>
-      </div>
-    );
   }
 
   return (

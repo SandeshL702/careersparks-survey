@@ -8,20 +8,12 @@ import {
 
 export type DbSource = "neon" | "pglite" | "mysql";
 
-/** PGLite only for Grok preview / local dev — never on Hostinger. */
+/** PGLite only for Grok preview / local `npm run dev`. Never on Hostinger. */
 export function allowEmbeddedDb(): boolean {
   if (typeof window !== "undefined") return false;
   if (mysqlConfigFromEnv() || process.env.DATABASE_URL?.trim()) return false;
-  const cwd = process.cwd();
-  if (
-    cwd.includes("/domains/") ||
-    cwd.includes("hbuilds") ||
-    /^u\d+$/.test(process.env.USER || "")
-  ) {
-    return false;
-  }
   if (process.env.GROK_AUTH_ISSUER) return true;
-  return process.env.NODE_ENV !== "production";
+  return process.env.NODE_ENV === "development";
 }
 
 function detectDbSource(): DbSource {
@@ -370,15 +362,4 @@ export async function getPglite(): Promise<import("@electric-sql/pglite").PGlite
 export function ensureDbReady(): Promise<void> {
   if (getDbSource() !== "pglite" || !allowEmbeddedDb()) return Promise.resolve();
   return getSql().then(() => undefined);
-}
-
-// Preview-only: never boot PGLite on Hostinger (WASM crash → 500 on every page).
-const globalBoot = globalThis as typeof globalThis & {
-  __pgBootstrapPromise__?: Promise<void>;
-};
-if (typeof window === "undefined" && getDbSource() === "pglite" && allowEmbeddedDb()) {
-  globalBoot.__pgBootstrapPromise__ ??= ensureDbReady().catch((err) => {
-    globalBoot.__pgBootstrapPromise__ = undefined;
-    console.error("[db] PGLite bootstrap failed:", err);
-  });
 }
