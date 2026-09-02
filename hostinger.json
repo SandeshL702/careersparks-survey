@@ -1,0 +1,7 @@
+{
+  "name": "CareerSparks Survey",
+  "framework": "other",
+  "node": "22",
+  "build": "npm run build:hostinger",
+  "start": "npm start"
+}
