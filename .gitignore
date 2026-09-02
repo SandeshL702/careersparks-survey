@@ -14,5 +14,5 @@ artifacts/
 .grok/skills/
 .grok/status
 .grok/og-pending
-AGENTS.md
-startup.sh
+data/install.json
+

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as InstallRouteImport } from './routes/install'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminFormsRouteImport } from './routes/admin.forms'
@@ -35,6 +36,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstallRoute = InstallRouteImport.update({
+  id: '/install',
+  path: '/install',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -118,6 +124,7 @@ const AdminFormsFormIdResponsesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/install': typeof InstallRoute
   '/login': typeof LoginRoute
   '/admin/forms': typeof AdminFormsRouteWithChildren
   '/admin/inbox': typeof AdminInboxRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/install': typeof InstallRoute
   '/login': typeof LoginRoute
   '/admin/inbox': typeof AdminInboxRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/install': typeof InstallRoute
   '/login': typeof LoginRoute
   '/admin/forms': typeof AdminFormsRouteWithChildren
   '/admin/inbox': typeof AdminInboxRoute
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/install'
     | '/login'
     | '/admin/forms'
     | '/admin/inbox'
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/install'
     | '/login'
     | '/admin/inbox'
     | '/admin/settings'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/install'
     | '/login'
     | '/admin/forms'
     | '/admin/inbox'
@@ -230,6 +242,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  InstallRoute: typeof InstallRoute
   LoginRoute: typeof LoginRoute
   FSlugRoute: typeof FSlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -249,6 +262,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/install': {
+      id: '/install'
+      path: '/install'
+      fullPath: '/install'
+      preLoaderRoute: typeof InstallRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -413,6 +433,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  InstallRoute: InstallRoute,
   LoginRoute: LoginRoute,
   FSlugRoute: FSlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

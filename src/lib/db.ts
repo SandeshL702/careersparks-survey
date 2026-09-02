@@ -1,3 +1,4 @@
+import "@/lib/runtime-env";
 import { pendingMigrations } from "../../scripts/migration-plan.mjs";
 import {
   isIgnorableMysqlError,
@@ -6,20 +7,27 @@ import {
   splitSqlStatements,
 } from "./sql-mysql";
 
-/** Which database backend is active. */
 export type DbSource = "neon" | "pglite" | "mysql";
+
+function detectDbSource(): DbSource {
+  const mysql = mysqlConfigFromEnv();
+  if (mysql) return "mysql";
+  const url = typeof process !== "undefined" ? process.env.DATABASE_URL?.trim() : "";
+  if (url) return /^mysql(?:s)?:\/\//i.test(url) ? "mysql" : "neon";
+  return "pglite";
+}
+
+export function getDbSource(): DbSource {
+  return detectDbSource();
+}
+
+/** @deprecated use getDbSource() — kept so existing imports still compile */
+export const dbSource: DbSource = detectDbSource();
 
 const rawDatabaseUrl =
   typeof process !== "undefined" ? process.env.DATABASE_URL : undefined;
 const databaseUrl =
   rawDatabaseUrl && rawDatabaseUrl.trim() ? rawDatabaseUrl.trim() : undefined;
-const mysqlConfig = typeof process !== "undefined" ? mysqlConfigFromEnv() : null;
-
-export const dbSource: DbSource = mysqlConfig
-  ? "mysql"
-  : databaseUrl
-    ? "neon"
-    : "pglite";
 
 /**
  * Minimal shared SQL surface, satisfied by both Neon and PGLite. Both the
@@ -174,17 +182,19 @@ async function createPgliteSql(): Promise<Sql> {
 async function createMysqlSql(): Promise<Sql> {
   globalRef.__mysqlSqlPromise__ ??= (async () => {
     const mysql = await import("mysql2/promise");
-    const pool = mysqlConfig && "uri" in mysqlConfig && mysqlConfig.uri
-      ? mysql.createPool({ uri: mysqlConfig.uri, waitForConnections: true, connectionLimit: 8 })
-      : mysql.createPool({
-          host: mysqlConfig?.host,
-          port: mysqlConfig?.port,
-          user: mysqlConfig?.user,
-          password: mysqlConfig?.password,
-          database: mysqlConfig?.database,
-          waitForConnections: true,
-          connectionLimit: 8,
-        });
+    const cfg = mysqlConfigFromEnv();
+    const pool =
+      cfg && "uri" in cfg && cfg.uri
+        ? mysql.createPool({ uri: cfg.uri, waitForConnections: true, connectionLimit: 8 })
+        : mysql.createPool({
+            host: cfg?.host,
+            port: cfg?.port,
+            user: cfg?.user,
+            password: cfg?.password,
+            database: cfg?.database,
+            waitForConnections: true,
+            connectionLimit: 8,
+          });
     await pool.query(
       "create table if not exists _migrations (name varchar(191) primary key, applied_at datetime not null default current_timestamp)",
     );
@@ -240,8 +250,9 @@ async function createSql(): Promise<Sql> {
         "or a server route loader, never from client code.",
     );
   }
-  if (dbSource === "mysql") return createMysqlSql();
-  return dbSource === "neon" ? createNeonSql() : createPgliteSql();
+  const source = getDbSource();
+  if (source === "mysql") return createMysqlSql();
+  return source === "neon" ? createNeonSql() : createPgliteSql();
 }
 
 /**
@@ -253,10 +264,16 @@ async function createSql(): Promise<Sql> {
  */
 export function getSql(): Promise<Sql> {
   sqlPromise ??= createSql().catch((err) => {
-    sqlPromise = null; // don't memoize failures — let the next call retry
+    sqlPromise = null;
     throw err;
   });
   return sqlPromise;
+}
+
+export function resetSqlCache() {
+  sqlPromise = null;
+  globalRef.__mysqlSqlPromise__ = undefined;
+  globalRef.__pgSqlPromise__ = undefined;
 }
 
 /**
@@ -265,7 +282,7 @@ export function getSql(): Promise<Sql> {
  * Kysely dialect). Throws when `DATABASE_URL` is set (that path uses Neon).
  */
 export async function getPglite(): Promise<import("@electric-sql/pglite").PGlite> {
-  if (dbSource !== "pglite") {
+  if (getDbSource() !== "pglite") {
     throw new Error("getPglite() is only available on the PGLite fallback (no DATABASE_URL)");
   }
   await getSql();
@@ -285,7 +302,7 @@ export async function getPglite(): Promise<import("@electric-sql/pglite").PGlite
  * module kick it off immediately (see bottom of file).
  */
 export function ensureDbReady(): Promise<void> {
-  if (dbSource === "neon") return Promise.resolve();
+  if (getDbSource() === "neon") return Promise.resolve();
   return getSql().then(() => undefined);
 }
 
@@ -294,7 +311,7 @@ export function ensureDbReady(): Promise<void> {
 const globalBoot = globalThis as typeof globalThis & {
   __pgBootstrapPromise__?: Promise<void>;
 };
-if (typeof window === "undefined" && dbSource !== "neon") {
+if (typeof window === "undefined" && getDbSource() !== "neon") {
   globalBoot.__pgBootstrapPromise__ ??= ensureDbReady().catch((err) => {
     globalBoot.__pgBootstrapPromise__ = undefined;
     console.error("[db] PGLite bootstrap failed:", err);

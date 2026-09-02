@@ -81,7 +81,7 @@ async function ensureOwnerAccount() {
   }
 }
 
-async function ensureSeeded() {
+export async function ensureSeeded() {
   const sql = await getSql();
   await ensureOwnerAccount();
   await sql`insert into workspaces (id, name) values (${WORKSPACE_ID}, ${"CareerSparks"}) on conflict (id) do nothing`;

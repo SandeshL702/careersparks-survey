@@ -18,8 +18,21 @@ import { dirname, join } from "node:path";
 import pg from "pg";
 import { pendingMigrations } from "./migration-plan.mjs";
 import { createRequire } from "node:module";
+import { existsSync, readFileSync } from "node:fs";
 
 const require = createRequire(import.meta.url);
+
+const installFile = join(dirname(fileURLToPath(import.meta.url)), "..", "data", "install.json");
+if (existsSync(installFile)) {
+  try {
+    const saved = JSON.parse(readFileSync(installFile, "utf8"));
+    for (const [key, value] of Object.entries(saved)) {
+      if (typeof value === "string" && value && !process.env[key]) process.env[key] = value;
+    }
+  } catch {
+    /* ignore */
+  }
+}
 
 const databaseUrl = process.env.DATABASE_URL?.trim();
 const dbHost = process.env.DB_HOST?.trim();
