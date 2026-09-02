@@ -8,7 +8,6 @@ import { answerToText, extractContact, sanitizeAnswers, scoreAnswers } from "./s
 import { WORKSPACE_ID } from "./seed";
 import { JOB_REQUIREMENT_FORM, FORM_TEMPLATES } from "./templates";
 import { emailError, phoneError, questionValueError } from "./validate";
-import { OWNER_LOGIN } from "./owner.server";
 import type {
   FormCategory,
   FormMode,
@@ -63,25 +62,19 @@ function mapForm(row: FormRow): FormRecord {
   };
 }
 
-async function ensureOwnerAccount() {
-  const sql = await getSql();
-  const existing = await sql<{ n: number }>`select count(*)::int as n from "user" where email = ${OWNER_LOGIN.email}`;
-  if ((existing[0]?.n ?? 0) > 0) return;
-  try {
-    const { auth } = await import("@/lib/auth/server");
-    await auth.api.signUpEmail({
-      body: {
-        email: OWNER_LOGIN.email,
-        password: OWNER_LOGIN.password,
-        name: OWNER_LOGIN.name,
-      },
-    });
-  } catch {
-    // Account may already exist from a race, or auth tables not ready yet.
-  }
+async function ownerEmail() {
+  return (process.env.ADMIN_EMAIL || "admin@careersparksco.in").trim().toLowerCase();
 }
 
-export async function ensureSeeded() {
+async function ensureOwnerAccount() {
+  const sql = await getSql();
+  const email = await ownerEmail();
+  const existing = await sql<{ n: number }>`select count(*)::int as n from "user" where email = ${email}`;
+  if ((existing[0]?.n ?? 0) > 0) return;
+  /* Owner is created by /install or first sign-in; auth server stays off the client graph. */
+}
+
+async function ensureSeeded() {
   const sql = await getSql();
   await ensureOwnerAccount();
   await sql`insert into workspaces (id, name) values (${WORKSPACE_ID}, ${"CareerSparks"}) on conflict (id) do nothing`;
@@ -138,7 +131,7 @@ async function requireMember(userId: string) {
   if (mine[0]) return { workspaceId: mine[0].workspace_id, role: mine[0].role as MemberRole };
   const users = await sql<{ email: string | null }>`select email from "user" where id = ${userId} limit 1`;
   const email = users[0]?.email?.toLowerCase() ?? "";
-  if (email && email === OWNER_LOGIN.email.toLowerCase()) {
+  if (email && email === (await ownerEmail())) {
     await sql`insert into workspace_members (workspace_id, user_id, role, email) values (${WORKSPACE_ID}, ${userId}, ${"owner"}, ${users[0]?.email ?? null})
       on conflict (workspace_id, user_id) do nothing`;
     return { workspaceId: WORKSPACE_ID, role: "owner" as MemberRole };

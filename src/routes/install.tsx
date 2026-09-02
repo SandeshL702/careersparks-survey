@@ -4,7 +4,9 @@ import { Logo } from "@/components/brand/spark-mark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getInstallState, runInstall } from "@/lib/survey/install.server";
+import { getInstallState, runInstall } from "@/lib/survey/install";
+import { authClient } from "@/lib/auth/client";
+import { prepareWorkspace } from "@/lib/survey/api";
 
 export const Route = createFileRoute("/install")({
   loader: async () => getInstallState(),
@@ -47,6 +49,15 @@ function InstallPage() {
           siteUrl: origin,
         },
       });
+      const signed = await authClient.signUp.email({
+        email: adminEmail,
+        password: adminPassword,
+        name: adminName,
+      });
+      if (signed.error && !/exist|already/i.test(signed.error.message || "")) {
+        throw new Error(signed.error.message || "Could not create admin login.");
+      }
+      await prepareWorkspace();
       await navigate({ to: "/login" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Install failed.");

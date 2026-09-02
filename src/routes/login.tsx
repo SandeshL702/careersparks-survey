@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { prepareWorkspace, getDashboardStats } from "@/lib/survey/api";
-import { getInstallState } from "@/lib/survey/install.server";
+import { getInstallState } from "@/lib/survey/install";
 
 export const Route = createFileRoute("/login")({
   loader: async () => {

@@ -1,13 +1,14 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+function installPath() {
+  return `${process.cwd()}/data/install.json`;
+}
 
-const FILE = join(process.cwd(), "data", "install.json");
-
-export function loadRuntimeEnv() {
+export async function loadRuntimeEnv() {
   if (typeof window !== "undefined") return;
-  if (!existsSync(FILE)) return;
+  const fs = await import("node:fs");
+  const file = installPath();
+  if (!fs.existsSync(file)) return;
   try {
-    const data = JSON.parse(readFileSync(FILE, "utf8")) as Record<string, unknown>;
+    const data = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
     for (const [key, value] of Object.entries(data)) {
       if (typeof value === "string" && value && !process.env[key]) {
         process.env[key] = value;
@@ -18,25 +19,21 @@ export function loadRuntimeEnv() {
   }
 }
 
-export function saveInstallEnv(env: Record<string, string>) {
-  mkdirSync(join(process.cwd(), "data"), { recursive: true });
+export async function saveInstallEnv(env: Record<string, string>) {
+  if (typeof window !== "undefined") return;
+  const fs = await import("node:fs");
+  const file = installPath();
+  fs.mkdirSync(`${process.cwd()}/data`, { recursive: true });
   let previous: Record<string, string> = {};
-  if (existsSync(FILE)) {
+  if (fs.existsSync(file)) {
     try {
-      previous = JSON.parse(readFileSync(FILE, "utf8")) as Record<string, string>;
+      previous = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, string>;
     } catch {
       previous = {};
     }
   }
-  const merged = { ...previous, ...env };
-  writeFileSync(FILE, JSON.stringify(merged, null, 2));
+  fs.writeFileSync(file, JSON.stringify({ ...previous, ...env }, null, 2));
   for (const [key, value] of Object.entries(env)) {
     if (value) process.env[key] = value;
   }
 }
-
-export function hasInstallFile() {
-  return existsSync(FILE);
-}
-
-loadRuntimeEnv();

@@ -1,4 +1,3 @@
-import "@/lib/runtime-env";
 import { pendingMigrations } from "../../scripts/migration-plan.mjs";
 import {
   isIgnorableMysqlError,
@@ -263,7 +262,17 @@ async function createSql(): Promise<Sql> {
  * both backends — define tables there, never inline in server functions.
  */
 export function getSql(): Promise<Sql> {
-  sqlPromise ??= createSql().catch((err) => {
+  sqlPromise ??= (async () => {
+    if (typeof window === "undefined") {
+      try {
+        const env = await import("./runtime-env");
+        await env.loadRuntimeEnv();
+      } catch {
+        /* no install file */
+      }
+    }
+    return createSql();
+  })().catch((err) => {
     sqlPromise = null;
     throw err;
   });

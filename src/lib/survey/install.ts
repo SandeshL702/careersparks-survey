@@ -1,10 +1,7 @@
-import { randomBytes } from "node:crypto";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { getDbSource, getSql, resetSqlCache } from "@/lib/db";
-import { loadRuntimeEnv, saveInstallEnv } from "@/lib/runtime-env";
-import { getOwnerLogin } from "./owner.server";
-import { ensureSeeded } from "./api";
+import { prepareWorkspace } from "./api";
 
 export type InstallState =
   | { status: "ready" }
@@ -18,12 +15,15 @@ export type InstallState =
     };
 
 async function readInstallState(): Promise<InstallState> {
-  loadRuntimeEnv();
+  const env = await import("@/lib/runtime-env");
+  await env.loadRuntimeEnv();
   if (getDbSource() === "pglite") return { status: "ready" };
   try {
     const sql = await getSql();
-    const rows = await sql<{ n: number }>`select count(*)::int as n from workspace_members`;
-    if ((rows[0]?.n ?? 0) > 0) return { status: "ready" };
+    const members = await sql<{ n: number }>`select count(*)::int as n from workspace_members`;
+    if ((members[0]?.n ?? 0) > 0) return { status: "ready" };
+    const forms = await sql<{ n: number }>`select count(*)::int as n from forms`;
+    if ((forms[0]?.n ?? 0) > 0) return { status: "ready" };
     return {
       status: "needs_admin",
       dbHost: process.env.DB_HOST || "localhost",
@@ -74,8 +74,10 @@ export const runInstall = createServerFn({ method: "POST" })
       await conn.end();
     }
 
+    const { randomBytes } = await import("node:crypto");
     const secret = process.env.BETTER_AUTH_SECRET || randomBytes(32).toString("hex");
-    saveInstallEnv({
+    const env = await import("@/lib/runtime-env");
+    await env.saveInstallEnv({
       DB_HOST: data.dbHost,
       DB_PORT: data.dbPort || "3306",
       DB_USER: data.dbUser,
@@ -93,7 +95,6 @@ export const runInstall = createServerFn({ method: "POST" })
       throw new Error("Database saved, but MySQL is still not active. Restart the Node.js app in hPanel once.");
     }
     await getSql();
-    await ensureSeeded();
-    const owner = getOwnerLogin();
-    return { ok: true as const, email: owner.email };
+    await prepareWorkspace();
+    return { ok: true as const, email: data.adminEmail.trim().toLowerCase() };
   });

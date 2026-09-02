@@ -5,7 +5,7 @@ import { Logo } from "@/components/brand/spark-mark";
 import { Button } from "@/components/ui/button";
 import { FormShare } from "@/components/survey/form-share";
 import { listPublishedForms } from "@/lib/survey/api";
-import { getInstallState } from "@/lib/survey/install.server";
+import { getInstallState } from "@/lib/survey/install";
 import type { FormCategory } from "@/lib/survey/types";
 
 export const Route = createFileRoute("/")({
