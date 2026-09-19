@@ -1,45 +1,77 @@
 # CareerSparks Survey
 
-**Live:** [survey.careersparksco.in](https://survey.careersparksco.in/)
+<p align="center">
+  <a href="https://survey.careersparksco.in/"><strong>Live demo → survey.careersparksco.in</strong></a>
+</p>
 
-Recruitment survey forms and a staff admin dashboard for CareerSparks.
+<p align="center">
+  <img src="https://img.shields.io/badge/live-demo-0f766e?style=flat-square" alt="live" />
+  <img src="https://img.shields.io/badge/stack-Node.js%20%2B%20MySQL-111827?style=flat-square" alt="stack" />
+  <img src="https://img.shields.io/badge/for-India%20hiring%20teams-1d4ed8?style=flat-square" alt="india hiring" />
+</p>
 
-Built for India hiring teams who need simple forms, not a heavy ATS.
+**CareerSparks Survey** is a recruitment survey app for Indian hiring teams.
 
-## What it does
+Collect job requirements and candidate answers on a public form. Review everything in a staff admin dashboard. No heavy ATS. No SaaS lock-in.
 
-- Public survey / job-requirement forms
-- Staff login and admin dashboard
-- Answers stored in MySQL
-- Runs as a Node.js app on Hostinger
+## Why it exists
+
+Most hiring tools are either Excel chaos or expensive ATS software.
+This app sits in the middle: simple forms for recruiters, a clean admin for staff, MySQL on your own Hostinger plan.
+
+## Features
+
+| Area | What you get |
+|---|---|
+| Public forms | Job-requirement / recruitment surveys candidates can fill |
+| Staff admin | Login, review responses, manage forms |
+| Data | Answers stored in **MySQL** (your database) |
+| Auth | Staff login with Better Auth |
+| Hosting | Runs as a **Node.js** app on Hostinger |
+
+## Live
+
+Try it: **[https://survey.careersparksco.in/](https://survey.careersparksco.in/)**
 
 ## Stack
 
-Node.js · TypeScript · MySQL · Better Auth
+- Node.js 22
+- TypeScript
+- MySQL
+- Better Auth
 
-## Topics
+## Keywords (SEO)
 
-`survey` · `recruitment` · `forms` · `nodejs` · `typescript` · `mysql` · `india`
+recruitment survey · hiring forms · job requirement form · India HR tools · Node.js survey app · MySQL admin dashboard · CareerSparks
 
 ## Run locally
 
-1. Clone this repo
-2. Copy `hostinger.env.example` → `.env` and fill your own DB + auth values (never commit `.env`)
-3. `npm install`
-4. `npm run build:hostinger` then `npm start`
+```bash
+git clone https://github.com/SandeshL702/careersparks-survey.git
+cd careersparks-survey
+cp hostinger.env.example .env   # fill your own values — never commit .env
+npm install
+npm run build:hostinger
+npm start
+```
 
-## Deploy (Hostinger)
+## Deploy on Hostinger
 
 1. Add a **Node.js** website (not WordPress)
 2. Connect this GitHub repo · Node **22**
-3. Build: `npm run build:hostinger` · Start: `npm start`
-4. Create a MySQL database in hPanel
-5. Set environment variables from `hostinger.env.example` (use strong secrets)
+3. Build command: `npm run build:hostinger`
+4. Start command: `npm start`
+5. Create MySQL in hPanel → put values in Hostinger env vars (see `hostinger.env.example`)
 
-Push to `main` rebuilds the site.
+Push to `main` rebuilds production.
 
-## Security notes
+## Security
 
-- Real passwords and secrets stay in Hostinger env vars — not in this repo
+- Secrets live only in Hostinger environment variables
 - `.env` is gitignored
-- First-time setup should use your own secrets; rotate anything that was ever shared
+- Use strong `BETTER_AUTH_SECRET` and admin passwords
+- Do not commit real DB passwords or API keys
+
+## License
+
+Built for CareerSparks. Open for learning and reuse — keep secrets out of git.
