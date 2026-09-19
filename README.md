@@ -1,27 +1,45 @@
 # CareerSparks Survey
 
-Recruitment forms + admin dashboard for CareerSparks.
+**Live:** [survey.careersparksco.in](https://survey.careersparksco.in/)
 
-## 1-click install on Hostinger Business
+Recruitment survey forms and a staff admin dashboard for CareerSparks.
 
-WordPress / Softaculous auto-installer **cannot** run this app (it is Node.js, not PHP). Closest 1-click:
+Built for India hiring teams who need simple forms, not a heavy ATS.
 
-### A. Hostinger (2 minutes)
+## What it does
 
-1. hPanel → **Websites** → **Add website** → **Node.js Web App**
-2. Import GitHub repo `SandeshL702/careersparks-survey`
-3. Node **22** · Build `npm run build:hostinger` · Start `npm start`
-4. Deploy
-5. hPanel → **Databases** → **MySQL** → Create (save name, user, password, host)
+- Public survey / job-requirement forms
+- Staff login and admin dashboard
+- Answers stored in MySQL
+- Runs as a Node.js app on Hostinger
 
-### B. Website pe Install (1 click)
+## Stack
 
-Open `https://survey.careersparksco.in/install`
+Node.js · TypeScript · MySQL · Better Auth
 
-1. Paste MySQL details  
-2. Choose admin email + password  
-3. Press **Install CareerSparks**
+## Topics
 
-Tables, admin account, and Job Requirement Form create ho jayenge. Phir footer **Staff** se login.
+`survey` · `recruitment` · `forms` · `nodejs` · `typescript` · `mysql` · `india`
 
-Push to `main` = auto rebuild.
+## Run locally
+
+1. Clone this repo
+2. Copy `hostinger.env.example` → `.env` and fill your own DB + auth values (never commit `.env`)
+3. `npm install`
+4. `npm run build:hostinger` then `npm start`
+
+## Deploy (Hostinger)
+
+1. Add a **Node.js** website (not WordPress)
+2. Connect this GitHub repo · Node **22**
+3. Build: `npm run build:hostinger` · Start: `npm start`
+4. Create a MySQL database in hPanel
+5. Set environment variables from `hostinger.env.example` (use strong secrets)
+
+Push to `main` rebuilds the site.
+
+## Security notes
+
+- Real passwords and secrets stay in Hostinger env vars — not in this repo
+- `.env` is gitignored
+- First-time setup should use your own secrets; rotate anything that was ever shared
